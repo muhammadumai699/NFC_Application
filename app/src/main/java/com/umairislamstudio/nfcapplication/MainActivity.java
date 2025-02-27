@@ -7,6 +7,7 @@ import android.content.IntentFilter;
 import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
+import android.nfc.tech.MifareClassic;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -23,6 +24,7 @@ import com.github.devnied.emvnfccard.model.EmvCard;
 import com.github.devnied.emvnfccard.parser.EmvTemplate;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
@@ -94,35 +96,78 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
 
-        Log.d("NFC_DEBUG", "NFC intent received: " + intent.getAction());
+        Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
+        if (tag != null) {
+            // Print Tag ID
+            byte[] tagId = tag.getId();
+            Log.d("NFC_DEBUG", "Tag detected: " + bytesToHex(tagId));
 
-        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction()) ||
-                NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()) ||
-                NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
+            // Print NFC tech list
+            String[] techList = tag.getTechList();
+            Log.d("NFC_DEBUG", "Supported NFC Techs: " + Arrays.toString(techList));
 
-            Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
-            if (tag != null) {
-                byte[] tagId = tag.getId();
-                Log.d("NFC_DEBUG", "Tag detected: " + bytesToHex(tagId));
-                String[] techList = tag.getTechList();
-                StringBuilder techs = new StringBuilder("Supported NFC Techs:\n");
-                for (String tech : techList) {
-                    techs.append(tech).append("\n");
-                }
-                Log.d("NFC_DEBUG", techs.toString());
-
-                IsoDep isoDep = IsoDep.get(tag);
-                if (isoDep != null) {
-                    txtStatus.setText("Reading card...");
-                    readEmvCard(isoDep);
-                } else {
-                    Log.e("NFC_DEBUG", "IsoDep is null. The tag might not be an EMV card.");
-                }
+            // Check if the tag supports MifareClassic
+            if (Arrays.asList(techList).contains("android.nfc.tech.MifareClassic")) {
+                readMifareClassic(tag);
             } else {
-                Log.e("NFC_DEBUG", "Tag is null.");
+                Log.e("NFC_DEBUG", "MifareClassic not supported on this tag.");
+                txtStatus.setText("Unsupported card type.");
             }
+        } else {
+            Log.e("NFC_DEBUG", "Tag is null.");
         }
     }
+
+
+    private void readMifareClassic(Tag tag) {
+        MifareClassic mifare = MifareClassic.get(tag);
+
+        if (mifare == null) {
+            Log.e("NFC_DEBUG", "MifareClassic is null.");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                mifare.connect();
+                int sectorCount = mifare.getSectorCount();
+                int blockCount = mifare.getBlockCount();
+                Log.d("NFC_DEBUG", "Sector Count: " + sectorCount + ", Block Count: " + blockCount);
+
+                StringBuilder cardData = new StringBuilder();
+
+                for (int sectorIndex = 0; sectorIndex < sectorCount; sectorIndex++) {
+                    boolean auth = mifare.authenticateSectorWithKeyA(sectorIndex, MifareClassic.KEY_DEFAULT);
+                    if (auth) {
+                        Log.d("NFC_DEBUG", "Authenticated Sector: " + sectorIndex);
+                        int blockIndex = mifare.sectorToBlock(sectorIndex);
+                        for (int i = 0; i < mifare.getBlockCountInSector(sectorIndex); i++) {
+                            byte[] data = mifare.readBlock(blockIndex + i);
+                            String blockData = new String(data, StandardCharsets.UTF_8).trim();
+                            Log.d("NFC_DEBUG", "Sector " + sectorIndex + " Block " + (blockIndex + i) + ": " + blockData);
+                            cardData.append("Sector ").append(sectorIndex).append(", Block ").append(blockIndex + i).append(": ").append(blockData).append("\n");
+                        }
+                    } else {
+                        Log.e("NFC_DEBUG", "Authentication failed for Sector: " + sectorIndex);
+                    }
+                }
+
+                mifare.close();
+
+                String finalData = cardData.toString();
+                uiHandler.post(() -> {
+                    txtStatus.setText("Card Read Successfully!");
+                    txtCardNumber.setText(finalData);
+                });
+
+            } catch (IOException e) {
+                Log.e("NFC_DEBUG", "Error reading MIFARE card", e);
+                uiHandler.post(() -> txtStatus.setText("Error reading card"));
+            }
+        }).start();
+    }
+
+
 
     @SuppressLint("SetTextI18n")
     private void readEmvCard(IsoDep isoDep) {
