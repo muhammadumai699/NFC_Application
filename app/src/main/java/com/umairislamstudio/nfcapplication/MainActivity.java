@@ -54,8 +54,12 @@ public class MainActivity extends AppCompatActivity {
                 this, 0, new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
                 PendingIntent.FLAG_MUTABLE);
 
-        IntentFilter ndef = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
-        intentFiltersArray = new IntentFilter[]{ndef};
+        IntentFilter techDiscovered = new IntentFilter(NfcAdapter.ACTION_TECH_DISCOVERED);
+        IntentFilter ndefDiscovered = new IntentFilter(NfcAdapter.ACTION_NDEF_DISCOVERED);
+        IntentFilter tagDiscovered = new IntentFilter(NfcAdapter.ACTION_TAG_DISCOVERED);
+
+        intentFiltersArray = new IntentFilter[]{techDiscovered, ndefDiscovered, tagDiscovered};
+
 
 
     }
