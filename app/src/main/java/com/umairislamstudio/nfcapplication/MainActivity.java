@@ -8,6 +8,7 @@ import android.nfc.NfcAdapter;
 import android.nfc.Tag;
 import android.nfc.tech.IsoDep;
 import android.nfc.tech.MifareClassic;
+import android.nfc.tech.NfcA;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -107,8 +108,8 @@ public class MainActivity extends AppCompatActivity {
             Log.d("NFC_DEBUG", "Supported NFC Techs: " + Arrays.toString(techList));
 
             // Check if the tag supports MifareClassic
-            if (Arrays.asList(techList).contains("android.nfc.tech.MifareClassic")) {
-                readMifareClassic(tag);
+            if (Arrays.asList(techList).contains("android.nfc.tech.NfcA")) {
+                readNfcA(tag);
             } else {
                 Log.e("NFC_DEBUG", "MifareClassic not supported on this tag.");
                 txtStatus.setText("Unsupported card type.");
@@ -116,6 +117,32 @@ public class MainActivity extends AppCompatActivity {
         } else {
             Log.e("NFC_DEBUG", "Tag is null.");
         }
+    }
+
+
+    private void readNfcA(Tag tag) {
+        NfcA nfcA = NfcA.get(tag);
+        if (nfcA == null) {
+            Log.e("NFC_DEBUG", "NfcA is not supported on this tag.");
+            return;
+        }
+
+        new Thread(() -> {
+            try {
+                nfcA.connect();
+                Log.d("NFC_DEBUG", "NfcA Connected!");
+
+                byte[] atqa = nfcA.getAtqa();
+                short sak = nfcA.getSak();
+
+                Log.d("NFC_DEBUG", "ATQA: " + bytesToHex(atqa));
+                Log.d("NFC_DEBUG", "SAK: " + sak);
+
+                nfcA.close();
+            } catch (IOException e) {
+                Log.e("NFC_DEBUG", "Error reading NfcA card", e);
+            }
+        }).start();
     }
 
 
