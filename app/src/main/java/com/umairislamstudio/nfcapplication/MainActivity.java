@@ -102,9 +102,14 @@ public class MainActivity extends AppCompatActivity {
 
             Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tag != null) {
-                Log.d("NFC_DEBUG", "Tag detected: " + Arrays.toString(tag.getId()));
+                byte[] tagId = tag.getId();
+                Log.d("NFC_DEBUG", "Tag detected: " + bytesToHex(tagId));
                 String[] techList = tag.getTechList();
-                Log.d("NFC_DEBUG", "Supported Techs: " + Arrays.toString(techList));
+                StringBuilder techs = new StringBuilder("Supported NFC Techs:\n");
+                for (String tech : techList) {
+                    techs.append(tech).append("\n");
+                }
+                Log.d("NFC_DEBUG", techs.toString());
 
                 IsoDep isoDep = IsoDep.get(tag);
                 if (isoDep != null) {
