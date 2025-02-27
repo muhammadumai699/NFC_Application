@@ -129,7 +129,9 @@ public class MainActivity extends AppCompatActivity {
 
         new Thread(() -> {
             try {
+                Log.d("NFC_DEBUG", "Connecting to MIFARE Classic...");
                 mifare.connect();
+                Log.d("NFC_DEBUG", "Connected!");
                 int sectorCount = mifare.getSectorCount();
                 int blockCount = mifare.getBlockCount();
                 Log.d("NFC_DEBUG", "Sector Count: " + sectorCount + ", Block Count: " + blockCount);
@@ -137,7 +139,7 @@ public class MainActivity extends AppCompatActivity {
                 StringBuilder cardData = new StringBuilder();
 
                 for (int sectorIndex = 0; sectorIndex < sectorCount; sectorIndex++) {
-                    boolean auth = mifare.authenticateSectorWithKeyA(sectorIndex, MifareClassic.KEY_DEFAULT);
+                    boolean auth = mifare.authenticateSectorWithKeyA(sectorIndex, MifareClassic.KEY_MIFARE_APPLICATION_DIRECTORY);
                     if (auth) {
                         Log.d("NFC_DEBUG", "Authenticated Sector: " + sectorIndex);
                         int blockIndex = mifare.sectorToBlock(sectorIndex);
