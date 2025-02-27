@@ -23,6 +23,7 @@ import com.github.devnied.emvnfccard.model.EmvCard;
 import com.github.devnied.emvnfccard.parser.EmvTemplate;
 
 import java.io.IOException;
+import java.util.Arrays;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -74,7 +75,10 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         if (nfcAdapter != null) {
-            nfcAdapter.enableForegroundDispatch(this, pendingIntent, intentFiltersArray, null);
+            String[][] techListsArray = new String[][]{
+                    new String[]{IsoDep.class.getName()}
+            };
+            nfcAdapter.enableForegroundDispatch(this, pendingIntent, intentFiltersArray, techListsArray);
         }
     }
 
@@ -90,16 +94,25 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
 
+        Log.d("NFC_DEBUG", "NFC intent received: " + intent.getAction());
+
         if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction()) ||
                 NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()) ||
                 NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
+
             Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tag != null) {
+                Log.d("NFC_DEBUG", "Tag detected: " + Arrays.toString(tag.getId()));
+
                 IsoDep isoDep = IsoDep.get(tag);
                 if (isoDep != null) {
                     txtStatus.setText("Reading card...");
                     readEmvCard(isoDep);
+                } else {
+                    Log.e("NFC_DEBUG", "IsoDep is null. The tag might not be an EMV card.");
                 }
+            } else {
+                Log.e("NFC_DEBUG", "Tag is null.");
             }
         }
     }
