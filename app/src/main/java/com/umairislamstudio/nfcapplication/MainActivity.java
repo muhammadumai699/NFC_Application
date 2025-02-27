@@ -87,7 +87,9 @@ public class MainActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
 
-        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction())) {
+        if (NfcAdapter.ACTION_TECH_DISCOVERED.equals(intent.getAction()) ||
+                NfcAdapter.ACTION_NDEF_DISCOVERED.equals(intent.getAction()) ||
+                NfcAdapter.ACTION_TAG_DISCOVERED.equals(intent.getAction())) {
             Tag tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
             if (tag != null) {
                 IsoDep isoDep = IsoDep.get(tag);
@@ -145,6 +147,14 @@ public class MainActivity extends AppCompatActivity {
             return "**** **** **** " + cardNumber.substring(cardNumber.length() - 4);
         }
         return "Invalid";
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : bytes) {
+            hexString.append(String.format("%02X", b));
+        }
+        return hexString.toString();
     }
 
 
